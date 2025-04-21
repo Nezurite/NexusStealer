@@ -9,6 +9,11 @@
 
 - Official Public Release
 
+## Following Update
+**Version :** *V1.1.0*
+
+- Better AV Evasion
+
 ---
 
 ## Installation and customization
