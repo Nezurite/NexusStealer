@@ -4,6 +4,12 @@
 
 ---
 
+## Updates
+
+**None** *(This is the V1.0.0 bruh)*
+
+---
+
 ## Installation and customization
 
 Change the :
