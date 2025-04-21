@@ -18,6 +18,8 @@
 
 ## Installation and customization *(≈ 5-10 Minutes)*
 
+- **YOU ABSOLUTELY NEED PYTHON >=3.10 *(Latest version recommended)***
+
 - Change the :
 ```
 COOKIE_WEBHOOK_URLS = ["1", "1_backup"]
