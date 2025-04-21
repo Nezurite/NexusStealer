@@ -16,7 +16,7 @@
 
 ---
 
-## Installation and customization
+## Installation and customization *(≈ 5-10 Minutes)*
 
 - Change the :
 ```
