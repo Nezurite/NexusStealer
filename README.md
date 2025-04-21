@@ -2,6 +2,10 @@
 
 **Disclaimer**: This code is provided for **educational purposes only**. I do not endorse or encourage any misuse, illegal activities, or damage caused by this code. By using this script, you agree that **you are solely responsible** for your actions. I bears no liability for any consequences arising from the use of this tool.
 
+## Version System
+
+The version system is easy to understand, the first number 'V**1**.0.0' is the main number to tell the "Era", for example, major updates will change the first numner. The second number 'V1.**0**.0' is a sub-version of the "Era", for example, the adds of simple updates such as a better security etc... will change the second number. Finally, the third number 'V1.0.**0**' is the patch number. Meaning that if there is a little security bug fix or any tiny fix, the last number will change.
+
 ---
 
 ## Updates
