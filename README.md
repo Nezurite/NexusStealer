@@ -5,8 +5,9 @@
 ---
 
 ## Updates
+**Version :** *V1.0.0*
 
-**None** *(This is the V1.0.0 bruh)*
+- Release
 
 ---
 
