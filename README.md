@@ -1,4 +1,4 @@
-# NEXUS STEALER
+# NEXUS STEALER *V1.0.0*
 
 **Disclaimer**: This code is provided for **educational purposes only**. I do not endorse or encourage any misuse, illegal activities, or damage caused by this code. By using this script, you agree that **you are solely responsible** for your actions. I bears no liability for any consequences arising from the use of this tool.
 
